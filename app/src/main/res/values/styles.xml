@@ -8,4 +8,8 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="UserCredentialsInputEditText">
+        <item name="android:minWidth">@dimen/user_credentials_input_min_width</item>
+        <item name="android:minHeight">?attr/listPreferredItemHeight</item>
+    </style>
 </resources>

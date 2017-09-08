@@ -56,3 +56,6 @@ awsconfiguration.json
 freeline.py
 freeline/
 freeline_project_description.json
+
+#Configuration
+Constants.java

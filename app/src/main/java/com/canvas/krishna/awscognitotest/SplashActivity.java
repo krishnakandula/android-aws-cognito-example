@@ -1,6 +1,7 @@
 package com.canvas.krishna.awscognitotest;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -20,11 +21,22 @@ public class SplashActivity extends AppCompatActivity {
         AWSConfiguration awsConfig = new AWSConfiguration(appContext);
         IdentityManager identityManager = new IdentityManager(appContext, awsConfig);
         IdentityManager.setDefaultIdentityManager(identityManager);
-        identityManager.doStartupAuth(this, new StartupAuthResultHandler() {
-            @Override
-            public void onComplete(StartupAuthResult startupAuthResult) {
-                // User identity is ready as unauthenticated user or previously signed-in user.
+        identityManager.doStartupAuth(this, startupAuthResult -> {
+            if(startupAuthResult.isUserSignedIn()) {
+                openMainActivity();
+            } else {
+                openLoginActivity();
             }
         });
+    }
+
+    private void openMainActivity() {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+    }
+
+    private void openLoginActivity() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent);
     }
 }

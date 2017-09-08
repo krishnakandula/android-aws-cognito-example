@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">AwsCognitoTest</string>
+
+    <!-- LOGIN_ACTIVITY -->
+    <string name="loginTitle_loginActivity">LOGIN</string>
+    <string name="loginEmail_loginActivity">Email</string>
+    <string name="loginUsername_loginActivity">Username</string>
+    <string name="loginPassword_loginActivity">Password</string>
+    <string name="loginConfirmBtn_loginActivity">Login</string>
 </resources>
