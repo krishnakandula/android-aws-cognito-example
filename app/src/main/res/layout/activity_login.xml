@@ -2,6 +2,7 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/parent_loginActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.canvas.krishna.awscognitotest.LoginActivity"
@@ -92,6 +93,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textInputLayout"
-        tools:text="@string/loginConfirmBtn_loginActivity" />
+        tools:text="@string/loginConfirmBtn_loginActivity"
+        android:text="@string/loginConfirmBtn_loginActivity"/>
 
 </android.support.constraint.ConstraintLayout>

@@ -1,5 +1,6 @@
 package com.canvas.krishna.awscognitotest;
 
+import android.support.design.widget.Snackbar;
 import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -85,18 +86,18 @@ public class LoginActivity extends AppCompatActivity {
         return userAttributes;
     }
 
-    private void signUpUser(String userId, String password, CognitoUserPool userPool, CognitoUserAttributes userAttributes, SingleEmitter<CognitoUser> rxEmitter) {
+    private void signUpUser(String userId, String password, CognitoUserPool userPool, CognitoUserAttributes userAttributes, SingleEmitter<CognitoUser> emitter) {
         userPool.signUp(userId, password, userAttributes, null, new SignUpHandler() {
             @Override
             public void onSuccess(CognitoUser user, boolean signUpConfirmationState, CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
                 Log.i(LOG_TAG, String.format("User with id %s successfully signed up!", user.getUserId()));
-                rxEmitter.onSuccess(user);
+                emitter.onSuccess(user);
             }
 
             @Override
             public void onFailure(Exception exception) {
                 Log.i(LOG_TAG, "Could not sign up user.");
-                rxEmitter.onError(exception);
+                emitter.onError(exception);
             }
         });
     }
@@ -106,12 +107,16 @@ public class LoginActivity extends AppCompatActivity {
         final String username = usernameEditText.getText().toString();
         final String password = passwordEditText.getText().toString();
 
-        Single<CognitoUser> userSingle = Single.create(emitter -> {
-            signUpUser(username, password, getCognitoUserPool(), getCognitoUserAttributes(), emitter);
-        });
+        Single<CognitoUser> userSingle = Single.create(emitter -> signUpUser(username, password, getCognitoUserPool(), getCognitoUserAttributes(), emitter));
         userSingle.subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe((cognitoUser, throwable) -> {
+                    if (cognitoUser != null) {
+                        Snackbar.make(LoginActivity.this.findViewById(R.id.parent_loginActivity),
+                                String.format("Created user %s", cognitoUser.getUserId()),
+                                Snackbar.LENGTH_SHORT)
+                                .show();
+                    }
                 });
     }
 
