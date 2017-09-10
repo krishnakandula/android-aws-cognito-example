@@ -1,27 +1,28 @@
 package com.canvas.krishna.awscognitotest;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserAttributes;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserCodeDeliveryDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserPool;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GenericHandler;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
-import com.amazonaws.regions.Region;
-import com.amazonaws.services.cognitoidentityprovider.AmazonCognitoIdentityProviderClient;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
+import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -37,6 +38,7 @@ public class LoginActivity extends AppCompatActivity {
     @BindView(R.id.loginBtn_loginActivity) Button loginBtn;
 
     private Unbinder mUnbinder;
+    private CognitoUser mCognitoUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,32 +52,8 @@ public class LoginActivity extends AppCompatActivity {
         return new ClientConfiguration();
     }
 
-    private AWSCredentials getAwsCredentials() {
-        return new AWSCredentials() {
-            @Override
-            public String getAWSAccessKeyId() {
-                return Constants.AWS_ACCESS_KEY;
-            }
-
-            @Override
-            public String getAWSSecretKey() {
-                return Constants.AWS_SECRET_KEY;
-            }
-        };
-    }
-
-    private AmazonCognitoIdentityProviderClient getCognitoIdentityProviderClient() {
-        AmazonCognitoIdentityProviderClient cognitoIdentityProviderClient = new AmazonCognitoIdentityProviderClient(getAwsCredentials());
-        cognitoIdentityProviderClient.setRegion(Region.getRegion("us-west-2"));
-        return cognitoIdentityProviderClient;
-    }
-
     private CognitoUserPool getCognitoUserPool() {
-        return new CognitoUserPool(this,
-                Constants.AWS_POOL_ID,
-                Constants.AWS_CLIENT_ID,
-                Constants.AWS_CLIENT_SECRET,
-                getCognitoIdentityProviderClient());
+        return ((MainApplication) getApplication()).getCognitoUserPool();
     }
 
     private CognitoUserAttributes getCognitoUserAttributes() {
@@ -90,6 +68,10 @@ public class LoginActivity extends AppCompatActivity {
         userPool.signUp(userId, password, userAttributes, null, new SignUpHandler() {
             @Override
             public void onSuccess(CognitoUser user, boolean signUpConfirmationState, CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
+                if (!signUpConfirmationState) {
+                    confirmUser(user);
+                }
+
                 Log.i(LOG_TAG, String.format("User with id %s successfully signed up!", user.getUserId()));
                 emitter.onSuccess(user);
             }
@@ -97,6 +79,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(Exception exception) {
                 Log.i(LOG_TAG, "Could not sign up user.");
+                Log.e(LOG_TAG, exception.getMessage());
                 emitter.onError(exception);
             }
         });
@@ -107,7 +90,9 @@ public class LoginActivity extends AppCompatActivity {
         final String username = usernameEditText.getText().toString();
         final String password = passwordEditText.getText().toString();
 
-        Single<CognitoUser> userSingle = Single.create(emitter -> signUpUser(username, password, getCognitoUserPool(), getCognitoUserAttributes(), emitter));
+        final CognitoUserPool cognitoUserPool = getCognitoUserPool();
+
+        Single<CognitoUser> userSingle = Single.create(emitter -> signUpUser(username, password, cognitoUserPool, getCognitoUserAttributes(), emitter));
         userSingle.subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe((cognitoUser, throwable) -> {
@@ -116,7 +101,50 @@ public class LoginActivity extends AppCompatActivity {
                                 String.format("Created user %s", cognitoUser.getUserId()),
                                 Snackbar.LENGTH_SHORT)
                                 .show();
+                        Log.d(LOG_TAG, "Current user is: " + cognitoUserPool.getCurrentUser().getUserId());
+                        mCognitoUser = cognitoUser;
                     }
+                });
+    }
+
+    private void confirmUser(CognitoUser user) {
+        Intent intent = new Intent(this, ConfirmSignInActivity.class);
+        startActivityForResult(intent, ConfirmSignInActivity.SIGN_IN_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == ConfirmSignInActivity.SIGN_IN_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                //Confirm Sign in
+                final String confirmationCode = data.getStringExtra(ConfirmSignInActivity.SIGN_IN_CODE_KEY);
+                confirmUserSignIn(confirmationCode, mCognitoUser);
+            }
+        }
+    }
+
+    private void confirmUserSignIn(final String confirmationCode, final CognitoUser cognitoUser) {
+        boolean forcedAliasCreation = false;
+        Completable confirmSignInCompletable = Completable.create(emitter -> {
+            cognitoUser.confirmSignUp(confirmationCode, forcedAliasCreation, new GenericHandler() {
+                @Override
+                public void onSuccess() {
+                    emitter.onComplete();
+                }
+
+                @Override
+                public void onFailure(Exception exception) {
+                    emitter.onError(exception);
+                }
+            });
+        });
+
+        confirmSignInCompletable.subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() -> {
+                    Toast.makeText(LoginActivity.this, "User was signed in", Toast.LENGTH_SHORT).show();
                 });
     }
 

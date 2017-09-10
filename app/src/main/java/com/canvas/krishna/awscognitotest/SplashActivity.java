@@ -2,12 +2,10 @@ package com.canvas.krishna.awscognitotest;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 
 import com.amazonaws.mobile.auth.core.IdentityManager;
-import com.amazonaws.mobile.auth.core.StartupAuthResult;
-import com.amazonaws.mobile.auth.core.StartupAuthResultHandler;
 import com.amazonaws.mobile.config.AWSConfiguration;
 
 public class SplashActivity extends AppCompatActivity {
@@ -19,8 +17,7 @@ public class SplashActivity extends AppCompatActivity {
 
         Context appContext = getApplicationContext();
         AWSConfiguration awsConfig = new AWSConfiguration(appContext);
-        IdentityManager identityManager = new IdentityManager(appContext, awsConfig);
-        IdentityManager.setDefaultIdentityManager(identityManager);
+        IdentityManager identityManager = ((MainApplication) getApplication()).getIdentityManager();
         identityManager.doStartupAuth(this, startupAuthResult -> {
             if(startupAuthResult.isUserSignedIn()) {
                 openMainActivity();
